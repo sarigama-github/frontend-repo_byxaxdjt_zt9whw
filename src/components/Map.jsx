@@ -9,7 +9,7 @@ export default function Map({ stations, route, ui = { highContrast:false, largeL
   const scaleY = (y) => height - (y/100) * height
 
   // Group stations by line and by name (to detect transfers)
-  const { byLine, byName, stationById, lineColors, routeIds } = useMemo(() => {
+  const { byLine, byName, stationById, lineColors, routeIds, lineOrder } = useMemo(() => {
     const stationById = Object.fromEntries(stations.map(s=>[s.id, s]))
     const byLine = {}
     const byName = {}
@@ -28,7 +28,17 @@ export default function Map({ stations, route, ui = { highContrast:false, largeL
       byLine[line].sort((a,b) => (a.order ?? 0) - (b.order ?? 0) || a.x - b.x || a.y - b.y)
     })
     const routeIds = new Set((route?.path || []).map(id => id))
-    return { byLine, byName, stationById, lineColors, routeIds }
+    // Stable visual ordering of lines to compute offsets
+    const numericFirst = Object.keys(byLine)
+      .sort((a,b)=>{
+        const na = isNaN(Number(a)) ? 999 : Number(a)
+        const nb = isNaN(Number(b)) ? 999 : Number(b)
+        if (na !== nb) return na - nb
+        return a.localeCompare(b)
+      })
+    // Put A and B after numbers but keep order
+    const lineOrder = numericFirst
+    return { byLine, byName, stationById, lineColors, routeIds, lineOrder }
   }, [stations, route])
 
   const isTransferName = (name) => (byName[name?.trim()?.toLowerCase()]?.length || 0) > 1
@@ -67,6 +77,28 @@ export default function Map({ stations, route, ui = { highContrast:false, largeL
   const labelFontSize = ui.largeLabels ? 14 : 12
   const labelBgOpacity = ui.highContrast ? 0.85 : 0.72
 
+  // Helper: line offset for schematic separation
+  const getLineOffset = (line) => {
+    const idx = lineOrder.indexOf(line)
+    if (idx === -1) return 0
+    // create symmetric offsets around 0: e.g., -4,-3,-2,-1,0,1,2,3,4 scaled to pixels
+    const n = lineOrder.length
+    const centered = idx - (n - 1)/2
+    const base = 5.0 // base separation in px
+    // slightly increase separation in the central area of the canvas
+    return centered * base
+  }
+
+  // Helper: compute offset point for a segment AB by d pixels perpendicular
+  const offsetPoint = (ax, ay, bx, by, d) => {
+    const dx = bx - ax
+    const dy = by - ay
+    const len = Math.hypot(dx, dy) || 1
+    const nx = -(dy / len)
+    const ny = dx / len
+    return [ax + nx * d, ay + ny * d, bx + nx * d, by + ny * d]
+  }
+
   return (
     <div className="bg-slate-800/60 border border-blue-500/20 rounded-xl p-3 overflow-auto">
       <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-[720px] md:h-[900px]">
@@ -85,20 +117,24 @@ export default function Map({ stations, route, ui = { highContrast:false, largeL
         </defs>
         <rect x="0" y="0" width={width} height={height} fill="url(#grid)" />
 
-        {/* Draw lines as polylines (de-emphasized but thicker for visibility) */}
-        {Object.keys(byLine).sort().map(line => (
-          <polyline key={line}
-            points={byLine[line].map(s=>`${scaleX(s.x)},${scaleY(s.y)}`).join(' ')}
-            fill="none"
-            stroke={lineColors[line]}
-            strokeWidth={10}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            opacity={baseOpacity}
-          />
-        ))}
+        {/* Draw lines with schematic separation by per-line offset and slightly thinner strokes */}
+        {Object.keys(byLine).sort().map(line => {
+          const pts = byLine[line]
+          const color = lineColors[line]
+          const dpx = getLineOffset(line)
+          const strokeW = 8 // slightly smaller than before
+          const segments = []
+          for (let i=0;i<pts.length-1;i++) {
+            const a = pts[i], b = pts[i+1]
+            const ax = scaleX(a.x), ay = scaleY(a.y)
+            const bx = scaleX(b.x), by = scaleY(b.y)
+            const [x1,y1,x2,y2] = offsetPoint(ax,ay,bx,by,dpx)
+            segments.push(<line key={`${line}-${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={strokeW} strokeLinecap="round" strokeLinejoin="round" opacity={baseOpacity} />)
+          }
+          return <g key={line}>{segments}</g>
+        })}
 
-        {/* Highlight route segments with stronger halo */}
+        {/* Highlight route segments with stronger halo (no offset so it stays centered) */}
         {route?.segments?.map((seg, idx) => {
           const a = stationById[seg.from_id]
           const b = stationById[seg.to_id]
@@ -179,7 +215,7 @@ export default function Map({ stations, route, ui = { highContrast:false, largeL
             )
           })}
 
-        {/* Line badges (legend) bigger */}
+        {/* Line badges (legend) */}
         <g>
           <rect x="12" y="12" width="172" height={Object.keys(byLine).length*24 + 24} rx="10" fill="#0b1220" opacity="0.65" />
           {Object.keys(byLine).sort().map((ln, idx) => (
