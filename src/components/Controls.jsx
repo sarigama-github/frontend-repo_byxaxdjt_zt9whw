@@ -4,7 +4,7 @@ export default function Controls({ stations, onCompute }) {
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
   const [options, setOptions] = useState({
-    transfer_penalty: 5,
+    transfer_penalty: 0, // sin penalización
     mobility: 'normal',
     time_of_day: 'offpeak',
     prefer_fewer_transfers: false,
@@ -58,13 +58,7 @@ export default function Controls({ stations, onCompute }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-        <div>
-          <label className="block text-sm text-blue-200 mb-1">Penalización transbordo</label>
-          <input type="number" min="0" step="0.5" value={options.transfer_penalty}
-            onChange={(e)=>setOptions(o=>({...o, transfer_penalty: parseFloat(e.target.value)}))}
-            className="w-full bg-slate-900 text-white rounded px-3 py-2 border border-slate-600"/>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
         <div>
           <label className="block text-sm text-blue-200 mb-1">Movilidad</label>
           <select value={options.mobility} onChange={(e)=>setOptions(o=>({...o, mobility: e.target.value}))}
