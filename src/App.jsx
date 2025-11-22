@@ -10,6 +10,13 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Preferencias de UI (no afectan el backend)
+  const [ui, setUi] = useState({
+    highContrast: false,
+    largeLabels: false,
+    scale: 1.0,
+  })
+
   const backend = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'
 
   useEffect(()=>{ fetchStations() }, [])
@@ -43,10 +50,10 @@ function App() {
         {error && (
           <div className="bg-red-500/20 border border-red-400/40 text-red-200 px-4 py-3 rounded">{error}</div>
         )}
-        <Controls stations={stations} onCompute={compute} />
+        <Controls stations={stations} onCompute={compute} ui={ui} onUiChange={setUi} />
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="md:col-span-2">
-            <Map stations={stations} route={route} />
+            <Map stations={stations} route={route} ui={ui} />
           </div>
           <div>
             {loading ? (

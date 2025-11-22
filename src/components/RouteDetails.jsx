@@ -3,12 +3,17 @@ export default function RouteDetails({ result, stations }) {
   const byId = Object.fromEntries(stations.map(s=>[s.id, s]))
   const fmt = (n)=> (Math.round(n*10)/10)
 
+  // Estimación simple de tiempo: factor por distancia + caminata por transbordo
+  const distance = result.total_distance || 0
+  const transfers = result.transfers || 0
+  const minutes = Math.round(distance * 0.45 + transfers * 4) // ~0.45 min por unidad + 4 min por transbordo
+
   return (
     <div className="bg-slate-800/60 border border-blue-500/20 rounded-xl p-4 space-y-3">
       <div className="flex flex-wrap items-center gap-4">
-        <div className="text-white font-semibold">Distancia aproximada: <span className="text-blue-300">{fmt(result.total_distance)} u</span></div>
-        <div className="text-white font-semibold">Costo total: <span className="text-blue-300">{fmt(result.total_cost)}</span></div>
-        <div className="text-white font-semibold">Transbordos: <span className="text-blue-300">{result.transfers}</span></div>
+        <div className="text-white font-semibold">Distancia: <span className="text-blue-300">{fmt(distance)} u</span></div>
+        <div className="text-white font-semibold">Tiempo estimado: <span className="text-blue-300">{minutes} min</span></div>
+        <div className="text-white font-semibold">Transbordos: <span className="text-blue-300">{transfers}</span></div>
         <div className="text-white font-semibold">Líneas: <span className="text-blue-300">{result.lines_used.join(', ')}</span></div>
       </div>
 
@@ -18,7 +23,7 @@ export default function RouteDetails({ result, stations }) {
           return (
             <li key={idx}>
               {seg.type === 'transfer' ? (
-                <span>Transbordo en {a?.name} → {b?.name} (penalización incluida)</span>
+                <span>Transbordo en {a?.name} → {b?.name}</span>
               ) : (
                 <span>Línea {seg.line}: {a?.name} → {b?.name}</span>
               )}

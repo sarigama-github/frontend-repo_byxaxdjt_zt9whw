@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export default function Controls({ stations, onCompute }) {
+export default function Controls({ stations, onCompute, ui, onUiChange }) {
   const [origin, setOrigin] = useState('')
   const [destination, setDestination] = useState('')
   const [options, setOptions] = useState({
@@ -80,6 +80,24 @@ export default function Controls({ stations, onCompute }) {
             onChange={(e)=>setOptions(o=>({...o, prefer_fewer_transfers: e.target.checked}))}
             className="h-4 w-4"/>
           <label htmlFor="few" className="text-sm text-blue-200">Prefiero menos transbordos</label>
+        </div>
+      </div>
+
+      {/* Accesibilidad visual */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+        <div className="flex items-center gap-2">
+          <input id="hc" type="checkbox" checked={ui.highContrast} onChange={(e)=>onUiChange(u=>({...u, highContrast: e.target.checked}))} className="h-4 w-4"/>
+          <label htmlFor="hc" className="text-sm text-blue-200">Alto contraste</label>
+        </div>
+        <div className="flex items-center gap-2">
+          <input id="ll" type="checkbox" checked={ui.largeLabels} onChange={(e)=>onUiChange(u=>({...u, largeLabels: e.target.checked}))} className="h-4 w-4"/>
+          <label htmlFor="ll" className="text-sm text-blue-200">Etiquetas grandes</label>
+        </div>
+        <div>
+          <label className="block text-sm text-blue-200 mb-1">Escala</label>
+          <input type="range" min="0.8" max="1.4" step="0.05" value={ui.scale}
+            onChange={(e)=>onUiChange(u=>({...u, scale: parseFloat(e.target.value)}))}
+            className="w-full"/>
         </div>
       </div>
 
